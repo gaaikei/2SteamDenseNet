@@ -8,7 +8,7 @@ import tensorflow as tf
 
 TF_VERSION = float('.'.join(tf.__version__.split('.')[:2]))
 
-class 2StreamNet_VGG16(object):
+class twoStreamNet_VGG16(object):
 	"""docstring for 2StreamNet"""
 	def __init__(self, rgb_data, flow_data, num_classes, 
 		sequence_length , weight_file, weights=None, sess=None):
@@ -339,4 +339,22 @@ class 2StreamNet_VGG16(object):
                 var = tf.get_variable('b', trainable=True)
                 session.run(var.assign(weights_dict[layer+'_b']))
 
-		
+	def test(self,data,batch_size):
+		num_examples = data.num_examples
+		total_loss = []
+		total_accuracy = []
+		for i in range(num_examples//batch_size):
+			batch = data.next_batch(batch_size)
+			feed_dict = {
+			self.videos:batch[0],
+			self.labels:batch[1],
+			self.istraining:False
+			}
+			fetches = [self.cross_entropy, self.accuracy]
+			loss, accuracy = self.sess.run(fetches,feed_dict = feed_dict)
+			total_loss.append(loss)
+			total_accuracy.append(accuracy)
+		print (total_loss,total_accuracy)
+		mean_loss = np.mean(total_loss)
+		mean_accuracy = np.mean(total_accuracy)
+		return	mean_loss,mean_accuracy
