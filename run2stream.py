@@ -24,16 +24,16 @@ train_params = {
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument(
-	  '--train', action='store_true',help='Train the model')
+		'--train', action='store_true',help='Train the model')
 	parser.add_argument(
-	  '--test', action='store_true',
-	  help='Test model for required dataset if pretrained model exists.'
-	     'If provided together with `--train` flag testing will be'
-	     'performed right after training.')
+		'--test', action='store_true',
+		help='Test model for required dataset if pretrained model exists.'
+		'If provided together with `--train` flag testing will be'
+		'performed right after training.')
 	parser.add_argument(
-	  '--model_type', '-m', type=str, choices=['DenseNet', 'DenseNet-BC','VGG16','ResNet'],
-	  default='DenseNet',
-	  help='What type of model to use (default: %(default)s)')
+		'--model_type', '-m', type=str, choices=['DenseNet', 'DenseNet-BC','VGG16','ResNet'],
+		default='DenseNet',
+		help='What type of model to use (default: %(default)s)')
 	# parser.add_argument(
 	#   '--growth_rate', '-k', type=int, choices=[12, 24, 40],
 	#   default=12,
@@ -43,9 +43,9 @@ if __name__ == '__main__':
 	#   '--depth', '-d', type=int, choices=[20, 30, 40, 100, 190, 250],
 	#   default=20,
 	#   help='Depth of whole network, restricted to paper choices (default: %(default)s)')
-	# parser.add_argument(
-	#   '--dataset', '-ds', type=str, 
-	#   help='Path to the dataset')
+	parser.add_argument(
+		'--dataset', '-ds', type=str, 
+		help='Path to the dataset')
 	# parser.add_argument(
 	#   '--total_blocks', '-tb', type=int, default=3, metavar='',
 	#   help='Total blocks of layers stack (default: %(default)s)')
@@ -53,8 +53,8 @@ if __name__ == '__main__':
 	#   '--keep_prob', '-kp', type=float, default=1.0, metavar='', 
 	#   help="Keep probability for dropout.")
 	parser.add_argument(
-	  '--gpu_id', '-gid', type=str, default='0',
-	  help='Specify the gpu ID to run the program')
+		'--gpu_id', '-gid', type=str, default='0',
+		help='Specify the gpu ID to run the program')
 	# parser.add_argument(
 	#   '--weight_decay', '-wd', type=float, default=1e-4, metavar='',
 	#   help='Weight decay for optimizer (default: %(default)s)')
@@ -64,29 +64,28 @@ if __name__ == '__main__':
 	# parser.add_argument(
 	#   '--reduction', '-red', type=float, default=0.5, metavar='',
 	#   help='reduction Theta at transition layer for DenseNets-BC models (default: %(default)s)')
-
 	parser.add_argument(
-	  '--logs', dest='should_save_logs', action='store_true',
-	  help='Write tensorflow logs')
+		'--logs', dest='should_save_logs', action='store_true',
+		help='Write tensorflow logs')
 	parser.add_argument(
-	  '--no-logs', dest='should_save_logs', action='store_false',
-	  help='Do not write tensorflow logs')
+		'--no-logs', dest='should_save_logs', action='store_false',
+		help='Do not write tensorflow logs')
 	parser.set_defaults(should_save_logs=True)
 
 	parser.add_argument(
-	  '--saves', dest='should_save_model', action='store_true',
-	  help='Save model during training')
+		'--saves', dest='should_save_model', action='store_true',
+		help='Save model during training')
 	parser.add_argument(
-	  '--no-saves', dest='should_save_model', action='store_false',
-	  help='Do not save model during training')
+		'--no-saves', dest='should_save_model', action='store_false',
+		help='Do not save model during training')
 	parser.set_defaults(should_save_model=True)
 
 	parser.add_argument(
-	  '--renew-logs', dest='renew_logs', action='store_true',
-	  help='Erase previous logs for model if exists.')
+		'--renew-logs', dest='renew_logs', action='store_true',
+		help='Erase previous logs for model if exists.')
 	parser.add_argument(
-	  '--not-renew-logs', dest='renew_logs', action='store_false',
-	  help='Do not erase previous logs for model if exists.')
+		'--not-renew-logs', dest='renew_logs', action='store_false',
+		help='Do not erase previous logs for model if exists.')
 	parser.set_defaults(renew_logs=False)
 
 	args = parser.parse_args()
@@ -129,10 +128,10 @@ if __name__ == '__main__':
 	# some default params dataset/architecture related
 	print("Params:")
 	for k, v in model_params.items():
-	  print("\t%s: %s" % (k, v))
+		print("\t%s: %s" % (k, v))
 	print("Train params:")
 	for k, v in train_params.items():
-	  print("\t%s: %s" % (k, v))
+		print("\t%s: %s" % (k, v))
 	
 	# ==========================================================================
 	# DATA PREPARATION
@@ -140,7 +139,16 @@ if __name__ == '__main__':
 	train_params['test']  = args.test
 	train_params['train'] = args.train
 	if not args.train:
-	  train_params['validation_set'] = False
-	data_provider = get_data_provider_by_path(args.dataset, train_params)
-
-
+		train_params['validation_set'] = False
+	data = Dataset(args.dataset, train_params)
+	# ==========================================================================
+	# TRAINING & TESTING
+	# ==========================================================================
+	print('init model')
+	model = twoStreamNet_VGG16(data.rgb, data.flow,**model_params)
+	if args.train:
+		print("train samples:",data.rgb.train.num_examples)
+		model.train_all_epochs(train_params)
+	if args.test:
+		if not args.train:
+			model.load_pretrained_model()

@@ -22,12 +22,32 @@ class twoStreamNet_VGG16(object):
 	# 	in_features = int(input.get_shape()[-1])
 	# 	kernel = 
 
+	def get_w_and_b(self,kernel_size,in_channels,output_channels):
+		kernel = [kernel_size,kernel_size,in_channels,output_channels]
+		weights = tf.get_variable("W",kernel,
+			initializer=tf.contrib.layers.xavier_initializer(),trainable=True)
+		biases = tf.get_variable("b",[output_channels],
+			initializer=tf.contrib.layers.xavier_initializer(0.1),trainable=True)
+		return weights,biases
+
+	def conv3d(self,data,kernel_size,output_channels,\
+		activation='relu',strides=[1,1,1,1,1],padding='SAME'):
+		in_channels = data.get_shape()[-1]
+		kernel = [kernel_size, kernel_size,in_channels,output_channels]
+		output = tf.nn.conv3d(data,kernel,strides=strides,padding=padding)
+		output = tf.nn.relu(output)
+		return output
+
 	def model(self):
 		with tf.variable_scope('spatialNet'):
 			with tf.variable_scope('conv1+pool1'):
 				with tf.variable_scope('conv1_1_spatial'):
+					# kernel_size = 3
+					# in_channels = self.rgb_data.get_shape[-1]
+					# output_channels = 64
+					# weights, biases = get_w_and_b(3,3,64)
 					weights = tf.get_variable("W",[3,3,3,64], 
-						initializer=tf.contrib.layers.xavier_initialzier(),trainable=True)
+						initializer=tf.contrib.layers.xavier_initializer(),trainable=True)
 					biases = tf.get_variable("b",[64],
 						initializer=tf.constant_initializer(0.1),trainable=True)
 					conv = tf.nn.conv2d(self.rgb_data,weights,strides=[1,1,1,1,1],padding='SAME')
@@ -35,7 +55,7 @@ class twoStreamNet_VGG16(object):
 
 				with tf.variable_scope('conv1_2_spatial'):
 					weights = tf.get_variable("W",[3,3,64,64], 
-						initializer=tf.contrib.layers.xavier_initialzier(),trainable=True)
+						initializer=tf.contrib.layers.xavier_initializer(),trainable=True)
 					biases = tf.get_variable("b",[64],
 						initializer=tf.constant_initializer(0.1),trainable=True)
 					conv = tf.nn.conv2d(conv1_1_spatial,weights,strides=[1,1,1,1,1],padding='SAME')
@@ -47,7 +67,7 @@ class twoStreamNet_VGG16(object):
 			with tf.variable_scope('conv2+pool2'):
 				with tf.variable_scope('conv2_2_spatial'):
 					weights = tf.get_variable("W",[3,3,64,128], 
-						initializer=tf.contrib.layers.xavier_initialzier(),trainable=True)
+						initializer=tf.contrib.layers.xavier_initializer(),trainable=True)
 					biases = tf.get_variable("b",[128],
 						initializer=tf.constant_initializer(0.1),trainable=True)
 					conv = tf.nn.conv2d(pool1_spatial,weights,strides=[1,1,1,1,1],padding='SAME')
@@ -55,7 +75,7 @@ class twoStreamNet_VGG16(object):
 
 				with tf.variable_scope('conv2_2_spatial'):
 					weights = tf.get_variable("W",[3,3,128,128], 
-						initializer=tf.contrib.layers.xavier_initialzier(),trainable=True)
+						initializer=tf.contrib.layers.xavier_initializer(),trainable=True)
 					biases = tf.get_variable("b",[64],
 						initializer=tf.constant_initializer(0.1),trainable=True)
 					conv = tf.nn.conv2d(conv2_1_spatial,weights,strides=[1,1,1,1,1],padding='SAME')
@@ -209,7 +229,8 @@ class twoStreamNet_VGG16(object):
 		            conv3_2_temporal = tf.nn.relu(conv + biases) #[?,56,56,256]
 		            
 		        with tf.variable_scope('conv3_3_temporal'):
-		            weights = tf.get_variable("W", [3,3,256,256], initializer=tf.contrib.layers.xavier_initializer(), trainable=True)
+		            weights = tf.get_variable("W", [3,3,256,256], 
+		            	initializer=tf.contrib.layers.xavier_initializer(), trainable=True)
 		            # Create variable named "biases".
 		            biases = tf.get_variable("b", [256], initializer=tf.constant_initializer(0.1), trainable=True)
 		            conv = tf.nn.conv2d(conv3_2_temporal, weights, strides=[1, 1, 1, 1], padding='SAME')
@@ -306,6 +327,9 @@ class twoStreamNet_VGG16(object):
 	            fusion_fc8 = tf.nn.bias_add(tf.matmul(fusion_fc7, fc8_W), fc8_b)
 
 		return fusion_fc8
+
+	def load_model(self):
+		ckpt = tf.train.get_checkpoint_state(self.save_path[0])
 
 	def load_pretrained_model(self,session):
 		weights_dict = np.load(self.weight_file,encoding='bytes')
